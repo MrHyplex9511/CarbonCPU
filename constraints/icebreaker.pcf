@@ -1,0 +1,36 @@
+# Project IceBreaker board constraints
+# Device: iCE40-UP5K, package sg48  (see DEVICE/PACKAGE in the Makefile)
+#
+# PROVENANCE. The numbers below are sg48 package ball names, copied from
+# YosysHQ/icestorm examples/icebreaker/icebreaker.pcf and independently
+# confirmed by the LiteX platform definition in
+# litex-hub/litex-boards -> litex_boards/platforms/icebreaker.py, which declares
+#   LatticeiCE40Platform("ice40-up5k-sg48", ...)
+#   ("clk12", 0, Pins("35")), ("user_ledr_n", 0, Pins("11")),
+#   ("user_ledg_n", 0, Pins("37")), ("user_btn_n", 0, Pins("10"))
+# Every one of these balls exists in .pins sg48 of
+# .tools/oss-cad-suite/share/icebox/chipdb-5k.txt.
+#
+# HISTORY -- two wrong assumptions were made and corrected here, do not repeat:
+#   1. The board was assumed to be an iCE40-HX8K (ct256). It is not. HX8K
+#      packages use ALPHABETIC ball names (A1, E3, F4, D2, K9); sg48 uses
+#      NUMERIC names. A hand-written HX8K-style PCF therefore fails with
+#      "package does not have a pin named '35'".
+#   2. Earlier revisions used invented alphabetic pins on ct256. All rejected.
+#
+# No -nowarn: every port exposed by rtl/top.sv is constrained here, so an
+# unmatched constraint is a genuine error and should stay loud.
+# Unused balls (RS232, SPI flash, PMOD headers) are simply not constrained.
+
+# --- 12 MHz oscillator (feeds a global buffer) ------------------------------
+set_io clk_12mhz  35
+
+# --- on-board LEDs and button (active low) ----------------------------------
+set_io led_red_n  11
+set_io led_green_n 37
+set_io btn_n      10
+
+# --- external RGB LED driver on the snap-off header (active low) ------------
+set_io rgb_red_n  39
+set_io rgb_grn_n  40
+set_io rgb_blu_n  41

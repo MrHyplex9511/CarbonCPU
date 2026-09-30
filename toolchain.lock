@@ -1,0 +1,26 @@
+# toolchain.lock — pinned open-source EDA toolchain versions.
+#
+# Reproducibility over convenience: `latest` is not a version. Bump these
+# deliberately, via `make tools-update`, and record what changed.
+#
+# !! NAMING TRAP, verified against the live API 2026-09-29:
+#     the release TAG is date-stamped with DASHES   -> 2026-09-29
+#     the release ASSET is date-stamped WITHOUT them -> oss-cad-suite-linux-x64-20260929.tgz
+#     The URL path segment is the TAG, the filename is the ASSET.
+#     Getting these two formats mixed up yields a silent 404.
+#
+# Format: KEY=value
+
+# --- OSS CAD Suite (yosys, nextpnr-*, verilator, OpenSTA, GTKWave, iverilog,
+# --- RISC-V GCC, FPGA packers). One tarball, no sudo, no root.
+OSS_CAD_SUITE_TAG=2026-09-29
+OSS_CAD_SUITE_ASSET=oss-cad-suite-linux-x64-20260929.tgz
+OSS_CAD_SUITE_URL=https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-09-29/oss-cad-suite-linux-x64-20260929.tgz
+OSS_CAD_SUITE_SHA256=
+# Extracted size ~2.5 GB. Archive ~745 MB.
+
+# --- No-sudo simulation bootstrap in .tools/ (2 MB, fast iteration) ----------
+IVERILOG_VERSION=12.0
+
+# Verify the pin is still live before relying on it:
+#   make tools-check

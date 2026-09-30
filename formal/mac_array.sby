@@ -1,0 +1,115 @@
+# ======================================================================
+# mac_array formal tasks
+#
+#   small  - k-induction proof at reduced parameters (4-bit data, 2x2 array).
+#            Completes in about half a minute. This is the default gate.
+#   cover  - reachability witnesses, at the real 8-bit 4x4 configuration.
+#   neg    - NEGATIVE CONTROL at the real configuration with a deliberately
+#            undersized accumulator. MUST FAIL. If it passes, the no-overflow
+#            property is not checking anything and `small` is worthless.
+#            `make formal` asserts that this failure happens.
+#   odd    - proof at a NON-power-of-two geometry (3x3). This exists because
+#            a power-of-two geometry silently disables some of the address
+#            assertions: raddr is exactly ROW_BITS wide, so at ARRAY_ROWS=4
+#            `raddr < ARRAY_ROWS` is true for every possible value and the
+#            assertion is vacuous. At ARRAY_ROWS=3 the extra encoding state
+#            becomes reachable and the assertions have teeth again.
+#   prove  - k-induction proof at the real 8-bit 4x4 configuration. Much
+#            more expensive than `small` (16 unconstrained 8x8 multipliers in
+#            the reference cone per step) and run separately via
+#            `make formal-full`. Kept as its own task so a slow solver on a
+#            full config does not block the fast gate.
+#
+# Why reduced parameters for the default gate: the assertions are width- and
+# geometry-generic -- the same source text, the same induction, at a smaller
+# size. A structural bug (wrong sign, missing sign extension, off-by-one in
+# the read pipeline, a commit that returns a partial sum) reproduces at 4-bit
+# 2x2 in seconds, whereas the full config can take an hour. `neg` then proves
+# at full size that the overflow check has teeth, and `prove` closes the
+# loop when there is time for it. Simulation covers the full configuration
+# on every run regardless.
+# ======================================================================
+
+[tasks]
+small
+odd
+cover
+neg
+full
+prove
+
+[options]
+small: mode prove
+small: depth 12
+odd:   mode prove
+odd:   depth 12
+cover: mode cover
+cover: depth 24
+neg:   mode bmc
+neg:   depth 40
+full:  mode prove
+full:  depth 16
+prove: mode prove
+prove: depth 16
+
+[engines]
+smtbmc boolector
+
+[script]
+# [files] copies everything into src/ by basename, so the script refers to
+# the bare filenames, not the repo-relative paths.
+#
+# `full` re-reads both files with -D FORMAL_NO_REF, which strips the reference
+# model and the five arithmetic properties that consume it. See the long
+# comment on that macro in rtl/mac_array.sv. The reason: the reference is
+# 20 unconstrained 8x8 multipliers re-evaluated combinationally every
+# induction step, and no solver terminates on it. Without the reference the
+# proof is the structure -- read pipeline, address sanity, FSM discipline,
+# y_valid pulse -- which is the part that scales with width. The arithmetic
+# is proven at reduced geometry by `small`/`odd`, and its width claim is what
+# `neg` checks at the real geometry.
+small: read -formal -sv -DSYNTHESIS mac_array.sv
+small: read -formal -sv mac_array_props.sv
+odd:   read -formal -sv -DSYNTHESIS mac_array.sv
+odd:   read -formal -sv mac_array_props.sv
+cover: read -formal -sv -DSYNTHESIS mac_array.sv
+cover: read -formal -sv mac_array_props.sv
+neg:   read -formal -sv -DSYNTHESIS mac_array.sv
+neg:   read -formal -sv mac_array_props.sv
+prove: read -formal -sv -DSYNTHESIS mac_array.sv
+prove: read -formal -sv mac_array_props.sv
+full:  read -formal -sv -DSYNTHESIS -D FORMAL_NO_REF mac_array.sv
+full:  read -formal -sv -D FORMAL_NO_REF mac_array_props.sv
+
+# Reduced geometry: 4-bit data over a 2x2 array. ACC_WIDTH is left at the
+# derived default on purpose, so the derived-default arithmetic itself is
+# part of what is proven.
+small: chparam -set DATA_WIDTH  4 mac_array_props
+small: chparam -set ARRAY_ROWS  2 mac_array_props
+small: chparam -set ARRAY_COLS  2 mac_array_props
+small: prep -top mac_array_props
+
+# Non-power-of-two geometry, so ROW_BITS can encode more states than
+# ARRAY_ROWS and the address-sanity assertions stop being tautological.
+odd: chparam -set DATA_WIDTH  4 mac_array_props
+odd: chparam -set ARRAY_ROWS  3 mac_array_props
+odd: chparam -set ARRAY_COLS  3 mac_array_props
+odd: prep -top mac_array_props
+
+cover: prep -top mac_array_props
+
+# Negative control: shrink the accumulator by one bit at the real 8-bit 4x4
+# configuration so the true dot product no longer fits, then look for the
+# overflow assertion to fire in a bounded prefix.
+neg: chparam -set ACC_WIDTH 17 mac_array_props
+neg: prep -top mac_array_props
+
+prove: prep -top mac_array_props
+
+# Real 8-bit 4x4 geometry, no reference model. Every task above overrides the
+# geometry, so this one explicitly sets nothing and inherits the RTL defaults.
+full: prep -top mac_array_props
+
+[files]
+rtl/mac_array.sv
+formal/mac_array_props.sv

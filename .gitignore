@@ -1,0 +1,17 @@
+build/
+obj_dir/
+.tools/
+*.deb
+*.vcd
+sim.vvp
+.vscode/
+.DS_Store
+
+# SymbiYosys work directories. `sby -f formal/mac_array.sby small` creates
+# formal/mac_array_small/ (plus a stray base dir per task) holding elaborated
+# netlists, model scripts, engine logs and VCD counterexamples -- about 4.6 MB
+# of pure build output next to the 8 KB of sources that generated it. None of
+# it belongs in history; regenerate with `make formal`.
+formal/mac_array*/
+!formal/mac_array.sby
+!formal/mac_array_props.sv
